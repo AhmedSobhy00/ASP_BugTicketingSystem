@@ -8,22 +8,23 @@ using BugTicketingSystem.BAL.DTOs.Common;
 using BugTicketingSystem.BAL.DTOs.ProjectDto;
 using BugTicketingSystem.DAL.Context;
 using BugTicketingSystem.DAL.Models;
+using BugTicketingSystem.DAL.UnitofWork;
 using Microsoft.EntityFrameworkCore;
 
 namespace BugTicketingSystem.BAL.Services.projects
 {
     public class ProjectService : IProjectService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitofwork _unitofwork;
 
-        public ProjectService(ApplicationDbContext context)
+        public ProjectService(IUnitofwork unitofwork)
         {
-            _context = context;
+            _unitofwork = unitofwork;
         }
 
         public async Task<GeneralResult<Guid>> CreateProjectAsync(ProjectAddDto projectDto)
         {
-            var existingProject = await _context.Projects
+            var existingProject = await _unitofwork.Projects
                 .AnyAsync(p => p.ProjectName == projectDto.ProjectName);
 
             if (existingProject)
@@ -38,8 +39,8 @@ namespace BugTicketingSystem.BAL.Services.projects
                 Description = projectDto.Description
             };
 
-            _context.Projects.Add(project);
-            await _context.SaveChangesAsync();
+            await _unitofwork.Projects.AddAsync(project);
+            await _unitofwork.SaveChangesAsync();
 
             return GeneralResult<Guid>.Success(project.Id);
         }
@@ -47,21 +48,23 @@ namespace BugTicketingSystem.BAL.Services.projects
 
         public async Task<IEnumerable<ProjectReadDto>> GetAllProjectsAsync()
         {
-            return await _context.Projects
-                .Select(p => new ProjectReadDto
-                {
-                    Id = p.Id,
-                    ProjectName = p.ProjectName,
-                    Description = p.Description
-                })
-                .ToListAsync();
+            var projects = await _unitofwork.Projects.GetAllAsync();
+
+            return projects.Select(p => new ProjectReadDto
+            {
+                Id = p.Id,
+                ProjectName = p.ProjectName,
+                Description = p.Description
+            });
         }
+
 
         public async Task<GeneralResult<ProjectDetailsDto>> GetProjectByIdAsync(Guid id)
         {
-            var project = await _context.Projects
-       .Include(p => p.Bugs) 
-       .FirstOrDefaultAsync(p => p.Id == id);
+            var project = await _unitofwork.Projects
+              .GetQueryable()
+              .Include(p => p.Bugs)
+              .FirstOrDefaultAsync(p => p.Id == id);
 
             if (project == null)
                 return GeneralResult<ProjectDetailsDto>.Failure("Project not found.");

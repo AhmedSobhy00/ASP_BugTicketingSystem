@@ -9,6 +9,7 @@ using BugTicketingSystem.BAL.DTOs.Common;
 using BugTicketingSystem.BAL.DTOs.UserDtos;
 using BugTicketingSystem.DAL.Context;
 using BugTicketingSystem.DAL.Models;
+using BugTicketingSystem.DAL.UnitofWork;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -18,20 +19,20 @@ namespace BugTicketingSystem.BAL.Services.Users
 {
     public class UserService : IUserService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitofwork _unitofwork;
         private readonly IConfiguration _configuration;
         private readonly PasswordHasher<User> _passwordHasher;
 
-        public UserService(ApplicationDbContext context, IConfiguration configuration)
+        public UserService(IUnitofwork unitofwork, IConfiguration configuration)
         {
-            _context = context;
+            _unitofwork = unitofwork;
             _configuration = configuration;
             _passwordHasher = new PasswordHasher<User>();
         }
 
         public async Task<GeneralResult> RegisterUserAsync(UserAddDto userDto)
         {
-            if (await _context.Users.AnyAsync(u => u.Username == userDto.Username))
+            if (await _unitofwork.Users.AnyAsync(u => u.Username == userDto.Username))
                 return GeneralResult.Failure("Username already exists.");
 
             var allowedRoles = new[] { "Manager", "Developer", "Tester" };
@@ -47,8 +48,8 @@ namespace BugTicketingSystem.BAL.Services.Users
 
             user.PasswordHash = _passwordHasher.HashPassword(user, userDto.Password);
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            await _unitofwork.Users.AddAsync(user);
+            await _unitofwork.SaveChangesAsync();
 
             return GeneralResult.Success("User registered successfully.");
         }
@@ -56,7 +57,7 @@ namespace BugTicketingSystem.BAL.Services.Users
 
         public async Task<IEnumerable<UserReadDto>> GetAllUsersAsync()
         {
-            var users = await _context.Users.ToListAsync();
+            var users = await _unitofwork.Users.GetAllAsync();
 
             return users.Select(u => new UserReadDto
             {
@@ -66,9 +67,10 @@ namespace BugTicketingSystem.BAL.Services.Users
             });
         }
 
+
         public async Task<UserReadDto?> GetByIdAsync(Guid id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _unitofwork.Users.GetByIdAsync(id);
 
             if (user == null)
                 return null;
@@ -83,7 +85,7 @@ namespace BugTicketingSystem.BAL.Services.Users
 
         public async Task<GeneralResult<string>> LoginAsync(LoginDto dto)
         {
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == dto.Username);
+            var user = await _unitofwork.Users.SingleOrDefaultAsync(u => u.Username == dto.Username);
             if (user == null)
                 return GeneralResult<string>.Failure("Invalid Username or password");
 

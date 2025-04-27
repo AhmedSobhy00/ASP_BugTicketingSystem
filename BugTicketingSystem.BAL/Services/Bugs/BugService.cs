@@ -7,21 +7,22 @@ using BugTicketingSystem.BAL.DTOs.BugsDto;
 using BugTicketingSystem.BAL.DTOs.Common;
 using BugTicketingSystem.DAL.Context;
 using BugTicketingSystem.DAL.Models;
+using BugTicketingSystem.DAL.UnitofWork;
 using Microsoft.EntityFrameworkCore;
 
 namespace BugTicketingSystem.BAL.Services.Bugs
 {
     public class BugService : IBugService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitofwork _iunitofwork;
 
-        public BugService(ApplicationDbContext context) {
-            _context = context;
+        public BugService(IUnitofwork unitofwork) {
+            _iunitofwork = unitofwork;
         }
 
         public async Task<GeneralResult> CreateBugAsync(BugAddDto bugDto)
         {
-            var project = await _context.Projects.FindAsync(bugDto.ProjectId);
+            var project = await _iunitofwork.Projects.GetByIdAsync(bugDto.ProjectId);
             if (project == null)
                 return GeneralResult.Failure("Project not found.");
 
@@ -33,27 +34,28 @@ namespace BugTicketingSystem.BAL.Services.Bugs
                 ProjectId = bugDto.ProjectId
             };
 
-            _context.Bugs.Add(bug);
-            await _context.SaveChangesAsync();
+            await _iunitofwork.Bugs.AddAsync(bug);
+            await _iunitofwork.SaveChangesAsync();
 
             return GeneralResult.Success("Bug created successfully.");
         }
 
         public async Task<List<BugReadDto>> GetAllBugsAsync()
         {
-            return await _context.Bugs
-                .Select(b => new BugReadDto
-                {
-                    Id = b.Id,
-                    Name = b.Name,
-                    Description = b.Description
-                })
-                .ToListAsync();
+            var bugs = await _iunitofwork.Bugs.GetAllAsync();
+
+            return bugs.Select(b => new BugReadDto
+            {
+                Id = b.Id,
+                Name = b.Name,
+                Description = b.Description
+            }).ToList();
         }
+
 
         public async Task<GeneralResult<BugDetailsDto>> GetBugByIdAsync(Guid id)
         {
-            var bug = await _context.Bugs.FindAsync(id);
+            var bug = await _iunitofwork.Bugs.GetByIdAsync(id);
 
             if (bug == null)
                 return GeneralResult<BugDetailsDto>.Failure("Bug not found.");
@@ -72,28 +74,27 @@ namespace BugTicketingSystem.BAL.Services.Bugs
 
         public async Task<GeneralResult> AssignUserToBugAsync(Guid bugId, Guid userId)
         {
-            var bug = await _context.Bugs.Include(b => b.Users)
-                .FirstOrDefaultAsync(b => b.Id == bugId);
+            var bug = await _iunitofwork.Bugs.GetByIdAsync(bugId);
             if (bug == null)
                 return GeneralResult.Failure("Bug not found.");
 
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _iunitofwork.Users.GetByIdAsync(userId);
             if (user == null)
                 return GeneralResult.Failure("User not found.");
 
             if (bug.Users.Any(u => u.Id == userId))
-                return GeneralResult.Success("User is already assigned to this bug."); 
+                return GeneralResult.Success("User is already assigned to this bug.");
 
             bug.Users.Add(user);
-            await _context.SaveChangesAsync();
+            await _iunitofwork.SaveChangesAsync();
 
             return GeneralResult.Success("User assigned to bug successfully.");
         }
 
+
         public async Task<GeneralResult> RemoveUserFromBugAsync(Guid bugId, Guid userId)
         {
-            var bug = await _context.Bugs.Include(b => b.Users)
-                .FirstOrDefaultAsync(b => b.Id == bugId);
+            var bug = await _iunitofwork.Bugs.GetByIdAsync(bugId);
             if (bug == null)
                 return GeneralResult.Failure("Bug not found.");
 
@@ -102,7 +103,7 @@ namespace BugTicketingSystem.BAL.Services.Bugs
                 return GeneralResult.Success("User is not assigned to this bug."); 
 
             bug.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            await _iunitofwork.SaveChangesAsync();
 
             return GeneralResult.Success("User unassigned from bug successfully.");
         }

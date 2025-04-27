@@ -4,6 +4,8 @@ using BugTicketingSystem.BAL.Services.Bugs;
 using BugTicketingSystem.BAL.Services.projects;
 using BugTicketingSystem.BAL.Services.Users;
 using BugTicketingSystem.DAL.Context;
+using BugTicketingSystem.DAL.Repos.Genaric;
+using BugTicketingSystem.DAL.UnitofWork;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -26,6 +28,9 @@ namespace BugTicketingSystem.API
             builder.Services.AddScoped<IUserService, UserService>();
 
             builder.Services.AddScoped<IBugService, BugService>();
+
+            builder.Services.AddScoped<IUnitofwork, Unitofwork>();
+            builder.Services.AddScoped(typeof(IGenericRepo<>), typeof(GenericRepo<>));
 
             builder.Services.AddScoped<IAttachmentService, AttachmentService>();
             builder.Services.Configure<FormOptions>(options =>

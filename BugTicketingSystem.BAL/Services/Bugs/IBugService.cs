@@ -14,6 +14,7 @@ namespace BugTicketingSystem.BAL.Services.Bugs
         Task<List<BugReadDto>> GetAllBugsAsync();
         Task<GeneralResult<BugDetailsDto>> GetBugByIdAsync(Guid id);
 
+
         Task<GeneralResult> AssignUserToBugAsync(Guid bugId, Guid userId);
         Task<GeneralResult> RemoveUserFromBugAsync(Guid bugId, Guid userId);
 
