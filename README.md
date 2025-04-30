@@ -1,7 +1,6 @@
 
 # 🐞 Bug Ticketing System – API Documentation
 
-This web application helps software teams manage bugs across projects by allowing users to create, track, assign, and resolve bugs efficiently. It supports user management, project tracking, bug assignment, and file attachments.
 
 ---
 
