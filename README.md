@@ -117,7 +117,6 @@ Returns all bugs.
     "id": "guid",
     "name": "Login crash",
     "description": "App crashes when logging in",
-    "projectId": "guid"
   }
 ]
 ```
