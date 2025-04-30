@@ -2,7 +2,7 @@
 # 🐞 Bug Ticketing System – API Documentation
 
 
----
+
 
 ## 🔐 User Management
 
